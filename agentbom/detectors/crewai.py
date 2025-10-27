@@ -60,21 +60,18 @@ class CrewAIDetector(BaseDetector):
         # Extract crew information
         crew_info = self._extract_crew_info(tree, content)
         if crew_info:
-            result.agent_name = crew_info.get('name', file_path.stem)
-            result.metadata['agents'] = crew_info.get('agents', [])
-            result.metadata['tasks'] = crew_info.get('tasks', [])
-            result.tools = crew_info.get('tools', [])
+            result.agent_name = crew_info.get("name", file_path.stem)
+            result.metadata["agents"] = crew_info.get("agents", [])
+            result.metadata["tasks"] = crew_info.get("tasks", [])
+            result.tools = crew_info.get("tools", [])
 
         return result if result.found else None
 
-    def _extract_crew_info(self, tree: ast.AST, content: str) -> Optional[Dict[str, Any]]:
+    def _extract_crew_info(
+        self, tree: ast.AST, content: str
+    ) -> Optional[Dict[str, Any]]:
         """Extract information about CrewAI crew and agents."""
-        info = {
-            'name': None,
-            'agents': [],
-            'tasks': [],
-            'tools': []
-        }
+        info = {"name": None, "agents": [], "tasks": [], "tools": []}
 
         agents = {}
         tasks = {}
@@ -89,41 +86,45 @@ class CrewAIDetector(BaseDetector):
                         func_name = node.value.func.id
 
                         # Extract Agent definitions
-                        if func_name == 'Agent':
+                        if func_name == "Agent":
                             for target in node.targets:
                                 if isinstance(target, ast.Name):
                                     agent_var = target.id
-                                    agent_info = self._extract_agent_details(node.value, content)
+                                    agent_info = self._extract_agent_details(
+                                        node.value, content
+                                    )
                                     agents[agent_var] = {
-                                        'variable': agent_var,
-                                        **agent_info
+                                        "variable": agent_var,
+                                        **agent_info,
                                     }
 
                         # Extract Task definitions
-                        elif func_name == 'Task':
+                        elif func_name == "Task":
                             for target in node.targets:
                                 if isinstance(target, ast.Name):
                                     task_var = target.id
-                                    task_info = self._extract_task_details(node.value, content)
+                                    task_info = self._extract_task_details(
+                                        node.value, content
+                                    )
                                     tasks[task_var] = {
-                                        'variable': task_var,
-                                        **task_info
+                                        "variable": task_var,
+                                        **task_info,
                                     }
 
                         # Extract Crew definition
-                        elif func_name == 'Crew':
+                        elif func_name == "Crew":
                             for target in node.targets:
                                 if isinstance(target, ast.Name):
-                                    info['name'] = target.id
+                                    info["name"] = target.id
 
                             # Extract agents and tasks from Crew
                             for keyword in node.value.keywords:
-                                if keyword.arg == 'agents':
+                                if keyword.arg == "agents":
                                     if isinstance(keyword.value, ast.List):
                                         for item in keyword.value.elts:
                                             if isinstance(item, ast.Name):
                                                 crew_agents.append(item.id)
-                                elif keyword.arg == 'tasks':
+                                elif keyword.arg == "tasks":
                                     if isinstance(keyword.value, ast.List):
                                         for item in keyword.value.elts:
                                             if isinstance(item, ast.Name):
@@ -133,77 +134,83 @@ class CrewAIDetector(BaseDetector):
         for agent_var in crew_agents:
             if agent_var in agents:
                 agent_info = agents[agent_var]
-                info['agents'].append(agent_info)
+                info["agents"].append(agent_info)
 
                 # Extract tools from agent
-                if 'tools' in agent_info:
-                    for tool in agent_info['tools']:
-                        info['tools'].append(tool)
+                if "tools" in agent_info:
+                    for tool in agent_info["tools"]:
+                        info["tools"].append(tool)
 
         for task_var in crew_tasks:
             if task_var in tasks:
-                info['tasks'].append(tasks[task_var])
+                info["tasks"].append(tasks[task_var])
 
-        return info if info['agents'] else None
+        return info if info["agents"] else None
 
-    def _extract_agent_details(self, call_node: ast.Call, content: str) -> Dict[str, Any]:
+    def _extract_agent_details(
+        self, call_node: ast.Call, content: str
+    ) -> Dict[str, Any]:
         """Extract details from Agent constructor call."""
         details = {}
 
         for keyword in call_node.keywords:
-            if keyword.arg == 'role':
+            if keyword.arg == "role":
                 role = self.extract_string_value(keyword.value)
                 if role:
-                    details['role'] = role
-            elif keyword.arg == 'goal':
+                    details["role"] = role
+            elif keyword.arg == "goal":
                 goal = self.extract_string_value(keyword.value)
                 if goal:
-                    details['goal'] = goal[:200]  # Truncate long goals
-            elif keyword.arg == 'backstory':
+                    details["goal"] = goal[:200]  # Truncate long goals
+            elif keyword.arg == "backstory":
                 backstory = self.extract_string_value(keyword.value)
                 if backstory:
-                    details['backstory'] = backstory[:200]
-            elif keyword.arg == 'tools':
+                    details["backstory"] = backstory[:200]
+            elif keyword.arg == "tools":
                 # Extract tools if provided
                 tools = self._extract_tools_from_node(keyword.value, content)
                 if tools:
-                    details['tools'] = tools
-            elif keyword.arg == 'allow_delegation':
+                    details["tools"] = tools
+            elif keyword.arg == "allow_delegation":
                 if isinstance(keyword.value, ast.Constant):
-                    details['allow_delegation'] = keyword.value.value
-            elif keyword.arg == 'verbose':
+                    details["allow_delegation"] = keyword.value.value
+            elif keyword.arg == "verbose":
                 if isinstance(keyword.value, ast.Constant):
-                    details['verbose'] = keyword.value.value
-            elif keyword.arg == 'max_iter':
+                    details["verbose"] = keyword.value.value
+            elif keyword.arg == "max_iter":
                 if isinstance(keyword.value, ast.Constant):
-                    details['max_iter'] = keyword.value.value
+                    details["max_iter"] = keyword.value.value
 
         return details
 
-    def _extract_task_details(self, call_node: ast.Call, content: str) -> Dict[str, Any]:
+    def _extract_task_details(
+        self, call_node: ast.Call, content: str
+    ) -> Dict[str, Any]:
         """Extract details from Task constructor call."""
         details = {}
 
         for keyword in call_node.keywords:
-            if keyword.arg == 'description':
+            if keyword.arg == "description":
                 desc = self.extract_string_value(keyword.value)
                 if desc:
-                    details['description'] = desc[:200]
-            elif keyword.arg == 'agent':
+                    details["description"] = desc[:200]
+            elif keyword.arg == "agent":
                 if isinstance(keyword.value, ast.Name):
-                    details['assigned_agent'] = keyword.value.id
-            elif keyword.arg == 'expected_output':
+                    details["assigned_agent"] = keyword.value.id
+            elif keyword.arg == "expected_output":
                 output = self.extract_string_value(keyword.value)
                 if output:
-                    details['expected_output'] = output[:200]
-            elif keyword.arg == 'tools':
+                    details["expected_output"] = output[:200]
+            elif keyword.arg == "tools":
                 tools = self._extract_tools_from_node(keyword.value, content)
                 if tools:
-                    details['tools'] = tools
+                    details["tools"] = tools
 
         return details
 
-    def _extract_tools_from_node(self, node: ast.AST, content: str = "") -> List[ToolInfo]:
+    def _extract_tools_from_node(
+        self, node: ast.AST, content: str = ""
+    ) -> List[ToolInfo]:
         """Extract tool information from AST node."""
         tools = []
 
@@ -211,25 +218,25 @@ class CrewAIDetector(BaseDetector):
             for item in node.elts:
                 if isinstance(item, ast.Name):
                     # Reference to a tool variable - try to find its definition
-                    tool_info = self._find_tool_definition(item.id, content) if content else None
+                    tool_info = (
+                        self._find_tool_definition(item.id, content)
+                        if content
+                        else None
+                    )
                     if tool_info:
                         tools.append(tool_info)
                     else:
                         # Fallback to basic info
-                        tools.append(ToolInfo(
-                            name=item.id,
-                            file_path="",
-                            description=None
-                        ))
+                        tools.append(
+                            ToolInfo(name=item.id, file_path="", description=None)
+                        )
                 elif isinstance(item, ast.Call):
                     # Direct tool construction
                     if isinstance(item.func, ast.Name):
                         tool_name = item.func.id
-                        tools.append(ToolInfo(
-                            name=tool_name,
-                            file_path="",
-                            description=None
-                        ))
+                        tools.append(
+                            ToolInfo(name=tool_name, file_path="", description=None)
+                        )
 
         return tools
 
@@ -247,8 +254,8 @@ class CrewAIDetector(BaseDetector):
                     if isinstance(node, ast.FunctionDef) and node.name == name:
                         # Check if has @tool decorator
                         has_tool_decorator = any(
-                            (isinstance(dec, ast.Name) and dec.id == 'tool') or
-                            (isinstance(dec, ast.Attribute) and dec.attr == 'tool')
+                            (isinstance(dec, ast.Name) and dec.id == "tool")
+                            or (isinstance(dec, ast.Attribute) and dec.attr == "tool")
                             for dec in node.decorator_list
                         )
 
@@ -266,13 +273,18 @@ class CrewAIDetector(BaseDetector):
                             return ToolInfo(
                                 name=name,
                                 file_path="",
-                                description=full_info.get('description', docstring.split('\n')[0] if docstring else None),
-                                parameters=full_info.get('parameters', {}),
-                                returns=full_info.get('returns')
+                                description=full_info.get(
+                                    "description",
+                                    docstring.split("\n")[0] if docstring else None,
+                                ),
+                                parameters=full_info.get("parameters", {}),
+                                returns=full_info.get("returns"),
                             )
             except:
                 # Fallback to basic extraction
-                doc_pattern = rf'def\s+{re.escape(name)}\s*\([^)]*\)\s*:\s*"""([^"]*?)"""'
+                doc_pattern = (
+                    rf'def\s+{re.escape(name)}\s*\([^)]*\)\s*:\s*"""([^"]*?)"""'
+                )
                 doc_match = re.search(doc_pattern, content, re.DOTALL)
                 description = doc_match.group(1).strip() if doc_match else None
 

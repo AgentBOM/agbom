@@ -2,4 +2,4 @@
 
 from .git import GitExtractor
 
-__all__ = ['GitExtractor']
+__all__ = ["GitExtractor"]

@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 class ToolParameter(BaseModel):
     """Model for tool parameter definition."""
+
     type: str
     required: bool = False
     description: Optional[str] = None
@@ -15,12 +16,14 @@ class ToolParameter(BaseModel):
 
 class ToolReturns(BaseModel):
     """Model for tool return value definition."""
+
     type: str
     description: Optional[str] = None
 
 
 class ToolDetail(BaseModel):
     """Model for individual tool details."""
+
     tool_name: str
     description: str = "unknown"
     parameters: Dict[str, ToolParameter] = Field(default_factory=dict)
@@ -32,12 +35,14 @@ class ToolDetail(BaseModel):
 
 class Tools(BaseModel):
     """Model for agent tools."""
+
     count: int = 0
     details: List[ToolDetail] = Field(default_factory=list)
 
 
 class Agent(BaseModel):
     """Model for an individual agent."""
+
     name: str
     repository: str
     type: Literal["LLM Agent", "SQL Agent", "Retrieval Agent"] = "LLM Agent"
@@ -56,6 +61,7 @@ class Agent(BaseModel):
 
 class AgentBOM(BaseModel):
     """Root model for Agent Bill of Materials."""
+
     agents: List[Agent] = Field(default_factory=list)
 
     def to_json(self, indent: int = 2) -> str:

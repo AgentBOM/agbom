@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Iterator, List, Optional, Set
+from typing import Iterator, List, Optional
 import fnmatch
 
 
@@ -10,41 +10,41 @@ class FileWalker:
     """Walks directories and filters files for scanning."""
 
     DEFAULT_EXCLUDES = {
-        'node_modules',
-        '.venv',
-        'venv',
-        'dist',
-        'build',
-        'site-packages',
-        '__pycache__',
-        '.git',
-        '.pytest_cache',
-        '.mypy_cache',
-        '.tox',
-        '.coverage',
-        '.hypothesis',
-        'htmlcov',
-        'wheels',
-        '*.egg-info',
-        '.env',
-        'env',
+        "node_modules",
+        ".venv",
+        "venv",
+        "dist",
+        "build",
+        "site-packages",
+        "__pycache__",
+        ".git",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".tox",
+        ".coverage",
+        ".hypothesis",
+        "htmlcov",
+        "wheels",
+        "*.egg-info",
+        ".env",
+        "env",
     }
 
     SUPPORTED_EXTENSIONS = {
-        '.py',      # Python
-        '.ts',      # TypeScript
-        '.tsx',     # TypeScript React
-        '.js',      # JavaScript (for some TS transpiled code)
-        '.jsx',     # JavaScript React
+        ".py",  # Python
+        ".ts",  # TypeScript
+        ".tsx",  # TypeScript React
+        ".js",  # JavaScript (for some TS transpiled code)
+        ".jsx",  # JavaScript React
     }
 
     README_PATTERNS = [
-        'README',
-        'README.md',
-        'README.txt',
-        'README.rst',
-        'readme.md',
-        'Readme.md',
+        "README",
+        "README.md",
+        "README.txt",
+        "README.rst",
+        "readme.md",
+        "Readme.md",
     ]
 
     def __init__(
@@ -52,7 +52,7 @@ class FileWalker:
         max_file_mb: float = 1.5,
         include_patterns: Optional[List[str]] = None,
         exclude_patterns: Optional[List[str]] = None,
-        strict: bool = True
+        strict: bool = True,
     ):
         """Initialize file walker.
 
@@ -95,8 +95,7 @@ class FileWalker:
 
             # Filter directories in-place to avoid walking excluded dirs
             dirnames[:] = [
-                d for d in dirnames
-                if not self._should_exclude_dir(d, dir_path)
+                d for d in dirnames if not self._should_exclude_dir(d, dir_path)
             ]
 
             # Process files
@@ -123,7 +122,11 @@ class FileWalker:
 
         # Check full path patterns
         full_path = parent_path / dirname
-        rel_path = full_path.relative_to(parent_path.parent) if parent_path.parent != full_path else Path(dirname)
+        rel_path = (
+            full_path.relative_to(parent_path.parent)
+            if parent_path.parent != full_path
+            else Path(dirname)
+        )
 
         for pattern in self.exclude_patterns:
             if fnmatch.fnmatch(str(rel_path), pattern):
@@ -198,9 +201,9 @@ class FileWalker:
             Path to CODEOWNERS file if found
         """
         possible_locations = [
-            root_path / 'CODEOWNERS',
-            root_path / '.github' / 'CODEOWNERS',
-            root_path / 'docs' / 'CODEOWNERS',
+            root_path / "CODEOWNERS",
+            root_path / ".github" / "CODEOWNERS",
+            root_path / "docs" / "CODEOWNERS",
         ]
 
         for location in possible_locations:
@@ -218,7 +221,7 @@ class FileWalker:
         Returns:
             File content or None if unable to read
         """
-        encodings = ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252']
+        encodings = ["utf-8", "utf-8-sig", "latin-1", "cp1252"]
 
         for encoding in encodings:
             try:

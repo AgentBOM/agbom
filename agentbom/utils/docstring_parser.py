@@ -1,13 +1,14 @@
 """Docstring parser utility for extracting parameter and return documentation."""
 
 import re
-from typing import Dict, Optional, List, Tuple, Any
+from typing import Dict, Optional, List
 from dataclasses import dataclass
 
 
 @dataclass
 class ParameterDoc:
     """Documentation for a single parameter."""
+
     name: str
     type: Optional[str] = None
     description: Optional[str] = None
@@ -18,6 +19,7 @@ class ParameterDoc:
 @dataclass
 class DocstringInfo:
     """Parsed docstring information."""
+
     description: Optional[str] = None
     parameters: List[ParameterDoc] = None
     returns: Optional[Dict[str, str]] = None  # {"type": ..., "description": ...}
@@ -85,25 +87,28 @@ class DocstringParser:
         info = DocstringInfo()
 
         # Extract description (text before first section)
-        desc_match = re.match(r'^(.*?)(?=\n\s*(?:Args?|Parameters?|Returns?|Yields?|Raises?|Note|Notes|Example|Examples|See Also|Attributes?|References?):|$)',
-                             docstring, re.DOTALL)
+        desc_match = re.match(
+            r"^(.*?)(?=\n\s*(?:Args?|Parameters?|Returns?|Yields?|Raises?|Note|Notes|Example|Examples|See Also|Attributes?|References?):|$)",
+            docstring,
+            re.DOTALL,
+        )
         if desc_match:
             info.description = desc_match.group(1).strip()
 
         # Extract Args section
-        args_pattern = r'Args?:\s*\n((?:\s+.*\n?)*)'
+        args_pattern = r"Args?:\s*\n((?:\s+.*\n?)*)"
         args_match = re.search(args_pattern, docstring)
 
         if args_match:
             args_text = args_match.group(1)
 
             # Parse individual parameters
-            param_pattern = r'^\s+(\w+)\s*(?:\((.*?)\))?\s*:\s*(.*)$'
+            param_pattern = r"^\s+(\w+)\s*(?:\((.*?)\))?\s*:\s*(.*)$"
 
             current_param = None
-            for line in args_text.split('\n'):
+            for line in args_text.split("\n"):
                 # Check if we've hit the Returns section
-                if re.match(r'^\s*Returns?:', line):
+                if re.match(r"^\s*Returns?:", line):
                     break
 
                 param_match = re.match(param_pattern, line)
@@ -120,14 +125,18 @@ class DocstringParser:
                     required = True
                     default = None
                     if type_info:
-                        if 'optional' in type_info.lower():
+                        if "optional" in type_info.lower():
                             required = False
                         # Extract type without optional
-                        type_clean = re.sub(r',?\s*optional', '', type_info, flags=re.IGNORECASE).strip()
+                        type_clean = re.sub(
+                            r",?\s*optional", "", type_info, flags=re.IGNORECASE
+                        ).strip()
                         type_info = type_clean if type_clean else None
 
                     # Check for default value in description
-                    default_match = re.search(r'[Dd]efaults?\s+to\s+(.+?)(?:\.|$)', desc)
+                    default_match = re.search(
+                        r"[Dd]efaults?\s+to\s+(.+?)(?:\.|$)", desc
+                    )
                     if default_match:
                         default = default_match.group(1).strip()
                         required = False
@@ -137,35 +146,36 @@ class DocstringParser:
                         type=type_info,
                         description=desc,
                         default=default,
-                        required=required
+                        required=required,
                     )
-                elif current_param and line.strip() and not line.strip().startswith('Returns'):
+                elif (
+                    current_param
+                    and line.strip()
+                    and not line.strip().startswith("Returns")
+                ):
                     # Continuation of description
-                    current_param.description += ' ' + line.strip()
+                    current_param.description += " " + line.strip()
 
             # Add last parameter
             if current_param:
                 info.parameters.append(current_param)
 
         # Extract Returns section
-        returns_pattern = r'Returns?:\s*\n\s+(.*?)(?:\n\s*\n|\n\s*\w+:|\Z)'
+        returns_pattern = r"Returns?:\s*\n\s+(.*?)(?:\n\s*\n|\n\s*\w+:|\Z)"
         returns_match = re.search(returns_pattern, docstring, re.DOTALL)
 
         if returns_match:
             returns_text = returns_match.group(1).strip()
 
             # Try to parse type and description
-            type_desc_match = re.match(r'^(\S+?):\s*(.*)$', returns_text, re.DOTALL)
+            type_desc_match = re.match(r"^(\S+?):\s*(.*)$", returns_text, re.DOTALL)
             if type_desc_match:
                 info.returns = {
                     "type": type_desc_match.group(1),
-                    "description": type_desc_match.group(2).strip()
+                    "description": type_desc_match.group(2).strip(),
                 }
             else:
-                info.returns = {
-                    "type": "Any",
-                    "description": returns_text
-                }
+                info.returns = {"type": "Any", "description": returns_text}
 
         return info
 
@@ -189,14 +199,16 @@ class DocstringParser:
         info = DocstringInfo()
 
         # Extract Parameters section
-        params_pattern = r'Parameters?\s*\n\s*-+\s*\n((?:.*\n?)*?)(?=\n\s*\w+\s*\n\s*-+|\Z)'
+        params_pattern = (
+            r"Parameters?\s*\n\s*-+\s*\n((?:.*\n?)*?)(?=\n\s*\w+\s*\n\s*-+|\Z)"
+        )
         params_match = re.search(params_pattern, docstring)
 
         if params_match:
             params_text = params_match.group(1)
 
             # Parse individual parameters
-            param_pattern = r'^(\w+)\s*:\s*(.*?)(?:\n|$)((?:\s+.*\n?)*)'
+            param_pattern = r"^(\w+)\s*:\s*(.*?)(?:\n|$)((?:\s+.*\n?)*)"
 
             for match in re.finditer(param_pattern, params_text, re.MULTILINE):
                 name = match.group(1)
@@ -206,42 +218,50 @@ class DocstringParser:
                 # Check if optional
                 required = True
                 default = None
-                if 'optional' in type_info.lower():
+                if "optional" in type_info.lower():
                     required = False
-                    type_info = re.sub(r',?\s*optional', '', type_info, flags=re.IGNORECASE).strip()
+                    type_info = re.sub(
+                        r",?\s*optional", "", type_info, flags=re.IGNORECASE
+                    ).strip()
 
                 # Check for default in description
-                default_match = re.search(r'[Dd]efault(?:s)?\s*[:=]\s*(.+?)(?:\.|$)', desc)
+                default_match = re.search(
+                    r"[Dd]efault(?:s)?\s*[:=]\s*(.+?)(?:\.|$)", desc
+                )
                 if default_match:
                     default = default_match.group(1).strip()
                     required = False
 
-                info.parameters.append(ParameterDoc(
-                    name=name,
-                    type=type_info if type_info else None,
-                    description=desc,
-                    default=default,
-                    required=required
-                ))
+                info.parameters.append(
+                    ParameterDoc(
+                        name=name,
+                        type=type_info if type_info else None,
+                        description=desc,
+                        default=default,
+                        required=required,
+                    )
+                )
 
         # Extract Returns section
-        returns_pattern = r'Returns?\s*\n\s*-+\s*\n((?:.*\n?)*?)(?=\n\s*\w+\s*\n\s*-+|\Z)'
+        returns_pattern = (
+            r"Returns?\s*\n\s*-+\s*\n((?:.*\n?)*?)(?=\n\s*\w+\s*\n\s*-+|\Z)"
+        )
         returns_match = re.search(returns_pattern, docstring)
 
         if returns_match:
             returns_text = returns_match.group(1).strip()
-            lines = returns_text.split('\n')
+            lines = returns_text.split("\n")
 
             if lines:
                 # First line is usually the type
                 type_line = lines[0].strip()
                 # Rest is description
                 desc_lines = lines[1:] if len(lines) > 1 else []
-                desc = '\n'.join(line.strip() for line in desc_lines).strip()
+                desc = "\n".join(line.strip() for line in desc_lines).strip()
 
                 info.returns = {
                     "type": type_line if type_line else "Any",
-                    "description": desc
+                    "description": desc,
                 }
 
         return info
@@ -261,8 +281,8 @@ class DocstringParser:
         info = DocstringInfo()
 
         # Extract parameters
-        param_desc_pattern = r':param\s+(\w+):\s*(.*?)(?=:|\Z)'
-        param_type_pattern = r':type\s+(\w+):\s*(.*?)(?=:|\Z)'
+        param_desc_pattern = r":param\s+(\w+):\s*(.*?)(?=:|\Z)"
+        param_type_pattern = r":type\s+(\w+):\s*(.*?)(?=:|\Z)"
 
         # Build parameter descriptions dict
         param_descs = {}
@@ -287,27 +307,33 @@ class DocstringParser:
             # Check if optional
             required = True
             default = None
-            if type_info and 'optional' in type_info.lower():
+            if type_info and "optional" in type_info.lower():
                 required = False
-                type_info = re.sub(r',?\s*optional', '', type_info, flags=re.IGNORECASE).strip()
+                type_info = re.sub(
+                    r",?\s*optional", "", type_info, flags=re.IGNORECASE
+                ).strip()
 
             if desc:
-                default_match = re.search(r'[Dd]efault(?:s)?\s*[:=]\s*(.+?)(?:\.|$)', desc)
+                default_match = re.search(
+                    r"[Dd]efault(?:s)?\s*[:=]\s*(.+?)(?:\.|$)", desc
+                )
                 if default_match:
                     default = default_match.group(1).strip()
                     required = False
 
-            info.parameters.append(ParameterDoc(
-                name=name,
-                type=type_info,
-                description=desc,
-                default=default,
-                required=required
-            ))
+            info.parameters.append(
+                ParameterDoc(
+                    name=name,
+                    type=type_info,
+                    description=desc,
+                    default=default,
+                    required=required,
+                )
+            )
 
         # Extract return information
-        return_desc_pattern = r':return(?:s)?:\s*(.*?)(?=:|\Z)'
-        return_type_pattern = r':rtype:\s*(.*?)(?=:|\Z)'
+        return_desc_pattern = r":return(?:s)?:\s*(.*?)(?=:|\Z)"
+        return_type_pattern = r":rtype:\s*(.*?)(?=:|\Z)"
 
         return_desc = None
         return_desc_match = re.search(return_desc_pattern, docstring, re.DOTALL)
@@ -322,7 +348,7 @@ class DocstringParser:
         if return_desc or return_type:
             info.returns = {
                 "type": return_type if return_type else "Any",
-                "description": return_desc if return_desc else ""
+                "description": return_desc if return_desc else "",
             }
 
         return info
@@ -335,25 +361,35 @@ class DocstringParser:
         """
         # Look for text before any section markers
         sections = [
-            r'\n\s*Args?:', r'\n\s*Parameters?:', r'\n\s*Returns?:',
-            r'\n\s*Yields?:', r'\n\s*Raises?:', r'\n\s*Note:',
-            r'\n\s*Example:', r'\n\s*Examples:', r'\n\s*See Also:',
-            r'\n\s*Attributes?:', r'\n\s*References?:',
-            r'\n\s*-{3,}',  # NumPy style separator
-            r':param\s+\w+:', r':type\s+\w+:', r':return:', r':rtype:'  # Sphinx
+            r"\n\s*Args?:",
+            r"\n\s*Parameters?:",
+            r"\n\s*Returns?:",
+            r"\n\s*Yields?:",
+            r"\n\s*Raises?:",
+            r"\n\s*Note:",
+            r"\n\s*Example:",
+            r"\n\s*Examples:",
+            r"\n\s*See Also:",
+            r"\n\s*Attributes?:",
+            r"\n\s*References?:",
+            r"\n\s*-{3,}",  # NumPy style separator
+            r":param\s+\w+:",
+            r":type\s+\w+:",
+            r":return:",
+            r":rtype:",  # Sphinx
         ]
 
-        pattern = '|'.join(sections)
+        pattern = "|".join(sections)
         match = re.search(pattern, docstring)
 
         if match:
-            desc = docstring[:match.start()].strip()
+            desc = docstring[: match.start()].strip()
         else:
             desc = docstring.strip()
 
         # Clean up the description
-        lines = desc.split('\n')
+        lines = desc.split("\n")
         cleaned_lines = [line.strip() for line in lines]
-        desc = ' '.join(line for line in cleaned_lines if line)
+        desc = " ".join(line for line in cleaned_lines if line)
 
         return desc if desc else None

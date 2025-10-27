@@ -59,10 +59,10 @@ class LangChainPythonDetector(BaseDetector):
             if isinstance(node, ast.Call):
                 agent_info = self._extract_agent_info(node, content, file_path)
                 if agent_info:
-                    result.agent_name = agent_info.get('name', file_path.stem)
-                    result.tools = agent_info.get('tools', [])
-                    result.architecture = agent_info.get('architecture', 'Other')
-                    result.metadata.update(agent_info.get('metadata', {}))
+                    result.agent_name = agent_info.get("name", file_path.stem)
+                    result.tools = agent_info.get("tools", [])
+                    result.architecture = agent_info.get("architecture", "Other")
+                    result.metadata.update(agent_info.get("metadata", {}))
 
                     # Check for SQL or Retrieval agent types
                     if self._has_sql_tools(result.tools, content):
@@ -77,7 +77,9 @@ class LangChainPythonDetector(BaseDetector):
 
         return result if result.found else None
 
-    def _extract_agent_info(self, node: ast.Call, content: str, file_path: Path) -> Optional[Dict[str, Any]]:
+    def _extract_agent_info(
+        self, node: ast.Call, content: str, file_path: Path
+    ) -> Optional[Dict[str, Any]]:
         """Extract agent information from AST Call node."""
         func_name = None
 
@@ -88,32 +90,31 @@ class LangChainPythonDetector(BaseDetector):
             func_name = node.func.attr
 
         # Check if this is an agent constructor
-        if func_name not in ['initialize_agent', 'AgentExecutor', 'from_agent_and_tools']:
+        if func_name not in [
+            "initialize_agent",
+            "AgentExecutor",
+            "from_agent_and_tools",
+        ]:
             return None
 
-        info = {
-            'name': None,
-            'tools': [],
-            'architecture': 'Other',
-            'metadata': {}
-        }
+        info = {"name": None, "tools": [], "architecture": "Other", "metadata": {}}
 
         # Extract arguments
         for keyword in node.keywords:
-            if keyword.arg == 'tools':
+            if keyword.arg == "tools":
                 # Extract tool list
                 tools = self._extract_tools_from_node(keyword.value, content, file_path)
-                info['tools'] = tools
-            elif keyword.arg == 'agent' and func_name == 'initialize_agent':
+                info["tools"] = tools
+            elif keyword.arg == "agent" and func_name == "initialize_agent":
                 # Check for ReAct architecture
                 if isinstance(keyword.value, ast.Attribute):
-                    if keyword.value.attr == 'ZERO_SHOT_REACT_DESCRIPTION':
-                        info['architecture'] = 'ReAct'
-            elif keyword.arg == 'agent_name':
+                    if keyword.value.attr == "ZERO_SHOT_REACT_DESCRIPTION":
+                        info["architecture"] = "ReAct"
+            elif keyword.arg == "agent_name":
                 # Extract agent name if provided
                 name = self.extract_string_value(keyword.value)
                 if name:
-                    info['name'] = name
+                    info["name"] = name
 
         # If assigned to a variable, use that as the name
         # Parse to find assignment
@@ -121,21 +122,25 @@ class LangChainPythonDetector(BaseDetector):
             tree = ast.parse(content)
             for n in ast.walk(tree):
                 if isinstance(n, ast.Assign):
-                    if n.value == node or (isinstance(n.value, ast.Call) and
-                                           isinstance(n.value.func, ast.Name) and
-                                           n.value.func.id == func_name):
+                    if n.value == node or (
+                        isinstance(n.value, ast.Call)
+                        and isinstance(n.value.func, ast.Name)
+                        and n.value.func.id == func_name
+                    ):
                         # Check if this assignment has the same line number as our call
                         for target in n.targets:
                             if isinstance(target, ast.Name):
-                                info['name'] = target.id
+                                info["name"] = target.id
                                 break
                         break
         except:
             pass
 
-        return info if info['tools'] else None
+        return info if info["tools"] else None
 
-    def _extract_tools_from_node(self, node: ast.AST, content: str, file_path: Path) -> List[ToolInfo]:
+    def _extract_tools_from_node(
+        self, node: ast.AST, content: str, file_path: Path
+    ) -> List[ToolInfo]:
         """Extract tool information from AST node."""
         tools = []
 
@@ -150,17 +155,24 @@ class LangChainPythonDetector(BaseDetector):
                 for n in ast.walk(tree):
                     if isinstance(n, ast.Assign):
                         for target in n.targets:
-                            if isinstance(target, ast.Name) and target.id == tools_var_name:
+                            if (
+                                isinstance(target, ast.Name)
+                                and target.id == tools_var_name
+                            ):
                                 # Found the tools variable definition
                                 if isinstance(n.value, (ast.List, ast.Tuple)):
                                     for item in n.value.elts:
                                         tool_info = None
                                         if isinstance(item, ast.Name):
                                             # Reference to a tool variable
-                                            tool_info = self._find_tool_definition(item.id, content, file_path)
+                                            tool_info = self._find_tool_definition(
+                                                item.id, content, file_path
+                                            )
                                         elif isinstance(item, ast.Call):
                                             # Tool construction (could be Tool(), StructuredTool(), or custom class)
-                                            tool_info = self._extract_tool_from_call(item, content, file_path)
+                                            tool_info = self._extract_tool_from_call(
+                                                item, content, file_path
+                                            )
                                         if tool_info:
                                             tools.append(tool_info)
             except:
@@ -183,7 +195,9 @@ class LangChainPythonDetector(BaseDetector):
 
         return tools
 
-    def _find_tool_definition(self, name: str, content: str, file_path: Path) -> Optional[ToolInfo]:
+    def _find_tool_definition(
+        self, name: str, content: str, file_path: Path
+    ) -> Optional[ToolInfo]:
         """Find tool definition by variable name."""
         # First check if it's a variable assignment to Tool/StructuredTool
         try:
@@ -194,7 +208,9 @@ class LangChainPythonDetector(BaseDetector):
                         if isinstance(target, ast.Name) and target.id == name:
                             # Check if it's a Tool/StructuredTool construction
                             if isinstance(node.value, ast.Call):
-                                tool_info = self._extract_tool_from_call(node.value, content, file_path)
+                                tool_info = self._extract_tool_from_call(
+                                    node.value, content, file_path
+                                )
                                 if tool_info:
                                     return tool_info
         except:
@@ -212,8 +228,8 @@ class LangChainPythonDetector(BaseDetector):
                     if isinstance(node, ast.FunctionDef) and node.name == name:
                         # Check if has @tool decorator
                         has_tool_decorator = any(
-                            (isinstance(dec, ast.Name) and dec.id == 'tool') or
-                            (isinstance(dec, ast.Attribute) and dec.attr == 'tool')
+                            (isinstance(dec, ast.Name) and dec.id == "tool")
+                            or (isinstance(dec, ast.Attribute) and dec.attr == "tool")
                             for dec in node.decorator_list
                         )
 
@@ -231,13 +247,18 @@ class LangChainPythonDetector(BaseDetector):
                             return ToolInfo(
                                 name=name,
                                 file_path="",
-                                description=full_info.get('description', docstring.split('\n')[0] if docstring else None),
-                                parameters=full_info.get('parameters', {}),
-                                returns=full_info.get('returns')
+                                description=full_info.get(
+                                    "description",
+                                    docstring.split("\n")[0] if docstring else None,
+                                ),
+                                parameters=full_info.get("parameters", {}),
+                                returns=full_info.get("returns"),
                             )
             except:
                 # Fallback to regex-based extraction
-                doc_pattern = rf'def\s+{re.escape(name)}\s*\([^)]*\)\s*:\s*"""([^"]*?)"""'
+                doc_pattern = (
+                    rf'def\s+{re.escape(name)}\s*\([^)]*\)\s*:\s*"""([^"]*?)"""'
+                )
                 doc_match = re.search(doc_pattern, content, re.DOTALL)
                 description = doc_match.group(1).strip() if doc_match else None
 
@@ -248,7 +269,9 @@ class LangChainPythonDetector(BaseDetector):
                 )
 
         # Look for Tool() or StructuredTool() construction
-        tool_construct_pattern = rf"{re.escape(name)}\s*=\s*(?:Tool|StructuredTool)\s*\("
+        tool_construct_pattern = (
+            rf"{re.escape(name)}\s*=\s*(?:Tool|StructuredTool)\s*\("
+        )
         match = re.search(tool_construct_pattern, content)
 
         if match:
@@ -270,44 +293,48 @@ class LangChainPythonDetector(BaseDetector):
 
         return None
 
-    def _extract_tool_from_call(self, node: ast.Call, content: str, file_path: Path) -> Optional[ToolInfo]:
+    def _extract_tool_from_call(
+        self, node: ast.Call, content: str, file_path: Path
+    ) -> Optional[ToolInfo]:
         """Extract tool info from Tool() or StructuredTool() call, or custom tool class instantiation."""
         if not isinstance(node.func, ast.Name):
             return None
 
         class_name = node.func.id
-        
+
         # Case 1: Standard LangChain Tool or StructuredTool
-        if class_name in ['Tool', 'StructuredTool']:
+        if class_name in ["Tool", "StructuredTool"]:
             tool_info = ToolInfo(name="unknown", file_path="")
             parameters = {}
             returns = None
 
             for keyword in node.keywords:
-                if keyword.arg == 'name':
+                if keyword.arg == "name":
                     name = self.extract_string_value(keyword.value)
                     if name:
                         tool_info.name = name
-                elif keyword.arg == 'description':
+                elif keyword.arg == "description":
                     desc = self.extract_string_value(keyword.value)
                     if desc:
                         tool_info.description = desc
-                elif keyword.arg == 'args_schema' and class_name == 'StructuredTool':
+                elif keyword.arg == "args_schema" and class_name == "StructuredTool":
                     # Extract parameters from Pydantic model if possible
                     if isinstance(keyword.value, ast.Name):
                         # Try to find the Pydantic model definition
                         model_name = keyword.value.id
-                        parameters = self._extract_pydantic_model_fields(model_name, content, file_path)
-                elif keyword.arg == 'func':
+                        parameters = self._extract_pydantic_model_fields(
+                            model_name, content, file_path
+                        )
+                elif keyword.arg == "func":
                     # If func is a lambda or function reference, try to extract signature
                     if isinstance(keyword.value, ast.Lambda):
                         # Extract lambda parameters
                         lambda_args = keyword.value.args
                         for arg in lambda_args.args:
                             parameters[arg.arg] = {
-                                'type': 'Any',
-                                'required': True,
-                                'description': None
+                                "type": "Any",
+                                "required": True,
+                                "description": None,
                             }
                     elif isinstance(keyword.value, ast.Name):
                         # Reference to a function
@@ -315,30 +342,34 @@ class LangChainPythonDetector(BaseDetector):
                         # Try to find function definition
                         func_info = self._extract_function_info(func_name, content)
                         if func_info:
-                            parameters = func_info.get('parameters', {})
-                            returns = func_info.get('returns')
+                            parameters = func_info.get("parameters", {})
+                            returns = func_info.get("returns")
 
             tool_info.parameters = parameters
             tool_info.returns = returns
             return tool_info
-        
+
         # Case 2: Custom tool class instantiation (e.g., FetchLDFTool())
         else:
             # Try to find the class definition in the current file first
             tool_info = self._extract_tool_from_class(class_name, content, file_path)
             if tool_info:
                 return tool_info
-            
+
             # If not found, follow imports
-            tool_info = self._find_tool_class_from_import(class_name, content, file_path)
+            tool_info = self._find_tool_class_from_import(
+                class_name, content, file_path
+            )
             if tool_info:
                 return tool_info
-            
+
             # Fallback: return basic info with class name
             logger.debug(f"Could not find tool class definition for {class_name}")
             return ToolInfo(name=class_name, file_path=str(file_path))
 
-    def _extract_pydantic_model_fields(self, model_name: str, content: str, file_path: Path) -> Dict[str, Any]:
+    def _extract_pydantic_model_fields(
+        self, model_name: str, content: str, file_path: Path
+    ) -> Dict[str, Any]:
         """Extract fields from a Pydantic model definition."""
         parameters = {}
         try:
@@ -347,57 +378,71 @@ class LangChainPythonDetector(BaseDetector):
                 if isinstance(node, ast.ClassDef) and node.name == model_name:
                     # Check if inherits from BaseModel
                     is_pydantic = any(
-                        (isinstance(base, ast.Name) and 'Model' in base.id) or
-                        (isinstance(base, ast.Attribute) and 'Model' in base.attr)
+                        (isinstance(base, ast.Name) and "Model" in base.id)
+                        or (isinstance(base, ast.Attribute) and "Model" in base.attr)
                         for base in node.bases
                     )
 
                     if is_pydantic:
                         # Extract class fields
                         for item in node.body:
-                            if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                            if isinstance(item, ast.AnnAssign) and isinstance(
+                                item.target, ast.Name
+                            ):
                                 field_name = item.target.id
-                                field_type = self._ast_to_type_string(item.annotation) if item.annotation else 'Any'
+                                field_type = (
+                                    self._ast_to_type_string(item.annotation)
+                                    if item.annotation
+                                    else "Any"
+                                )
 
                                 # Check if has default value
                                 required = True
                                 default = None
                                 if item.value:
                                     # Has default value
-                                    if isinstance(item.value, ast.Call) and isinstance(item.value.func, ast.Name):
-                                        if item.value.func.id == 'Field':
+                                    if isinstance(item.value, ast.Call) and isinstance(
+                                        item.value.func, ast.Name
+                                    ):
+                                        if item.value.func.id == "Field":
                                             # Pydantic Field() with potential default
                                             for kw in item.value.keywords:
-                                                if kw.arg == 'default':
-                                                    default = self._ast_to_value_string(kw.value)
+                                                if kw.arg == "default":
+                                                    default = self._ast_to_value_string(
+                                                        kw.value
+                                                    )
                                                     required = False
-                                                elif kw.arg == 'default_factory':
+                                                elif kw.arg == "default_factory":
                                                     required = False
-                                                    default = 'factory'
+                                                    default = "factory"
                                         else:
-                                            default = self._ast_to_value_string(item.value)
+                                            default = self._ast_to_value_string(
+                                                item.value
+                                            )
                                             required = False
                                     else:
                                         default = self._ast_to_value_string(item.value)
                                         required = False
 
                                 # Check if Optional type
-                                if 'Optional' in field_type or '| None' in field_type:
+                                if "Optional" in field_type or "| None" in field_type:
                                     required = False
 
                                 parameters[field_name] = {
-                                    'type': field_type,
-                                    'required': required,
-                                    'description': None
+                                    "type": field_type,
+                                    "required": required,
+                                    "description": None,
                                 }
                                 if default is not None:
-                                    parameters[field_name]['default'] = default
+                                    parameters[field_name]["default"] = default
         except:
             pass
 
         return parameters
 
-    def _extract_function_info(self, func_name: str, content: str) -> Optional[Dict[str, Any]]:
+    def _extract_function_info(
+        self, func_name: str, content: str
+    ) -> Optional[Dict[str, Any]]:
         """Extract function signature and docstring info."""
         try:
             tree = ast.parse(content)
@@ -431,11 +476,11 @@ class LangChainPythonDetector(BaseDetector):
     def _has_sql_tools(self, tools: List[ToolInfo], content: str) -> bool:
         """Check if agent has SQL tools."""
         sql_indicators = [
-            'SQLDatabaseToolkit',
-            'sql_toolkit',
-            'QuerySQLDataBaseTool',
-            'InfoSQLDatabaseTool',
-            'ListSQLDatabaseTool',
+            "SQLDatabaseToolkit",
+            "sql_toolkit",
+            "QuerySQLDataBaseTool",
+            "InfoSQLDatabaseTool",
+            "ListSQLDatabaseTool",
         ]
 
         for indicator in sql_indicators:
@@ -443,7 +488,9 @@ class LangChainPythonDetector(BaseDetector):
                 return True
 
         for tool in tools:
-            if 'sql' in tool.name.lower() or (tool.description and 'sql' in tool.description.lower()):
+            if "sql" in tool.name.lower() or (
+                tool.description and "sql" in tool.description.lower()
+            ):
                 return True
 
         return False
@@ -451,15 +498,15 @@ class LangChainPythonDetector(BaseDetector):
     def _has_retrieval_tools(self, tools: List[ToolInfo], content: str) -> bool:
         """Check if agent has retrieval/vectorstore tools."""
         retrieval_indicators = [
-            'VectorStoreRetriever',
-            'vectorstore',
-            'retriever',
-            'RetrievalQA',
-            'ConversationalRetrievalChain',
-            'FAISS',
-            'Chroma',
-            'Pinecone',
-            'Weaviate',
+            "VectorStoreRetriever",
+            "vectorstore",
+            "retriever",
+            "RetrievalQA",
+            "ConversationalRetrievalChain",
+            "FAISS",
+            "Chroma",
+            "Pinecone",
+            "Weaviate",
         ]
 
         for indicator in retrieval_indicators:
@@ -468,11 +515,16 @@ class LangChainPythonDetector(BaseDetector):
 
         for tool in tools:
             name_lower = tool.name.lower()
-            if any(term in name_lower for term in ['retriev', 'search', 'vector', 'embed']):
+            if any(
+                term in name_lower for term in ["retriev", "search", "vector", "embed"]
+            ):
                 return True
             if tool.description:
                 desc_lower = tool.description.lower()
-                if any(term in desc_lower for term in ['retriev', 'search', 'vector', 'embed']):
+                if any(
+                    term in desc_lower
+                    for term in ["retriev", "search", "vector", "embed"]
+                ):
                     return True
 
         return False
@@ -482,11 +534,11 @@ class LangChainPythonDetector(BaseDetector):
         providers = []
 
         provider_patterns = {
-            'langchain_openai': r'from\s+langchain_openai\s+import',
-            'langchain_anthropic': r'from\s+langchain_anthropic\s+import',
-            'langchain_google_genai': r'from\s+langchain_google_genai\s+import',
-            'langchain_community': r'from\s+langchain_community\s+import',
-            'langchain_experimental': r'from\s+langchain_experimental\s+import',
+            "langchain_openai": r"from\s+langchain_openai\s+import",
+            "langchain_anthropic": r"from\s+langchain_anthropic\s+import",
+            "langchain_google_genai": r"from\s+langchain_google_genai\s+import",
+            "langchain_community": r"from\s+langchain_community\s+import",
+            "langchain_experimental": r"from\s+langchain_experimental\s+import",
         }
 
         for provider, pattern in provider_patterns.items():
@@ -494,10 +546,12 @@ class LangChainPythonDetector(BaseDetector):
                 providers.append(provider)
 
         return providers
-    
-    def _extract_tool_from_class(self, class_name: str, content: str, file_path: Path) -> Optional[ToolInfo]:
+
+    def _extract_tool_from_class(
+        self, class_name: str, content: str, file_path: Path
+    ) -> Optional[ToolInfo]:
         """Extract tool information from a class definition.
-        
+
         Handles BaseTool subclasses with class attributes like:
             name = "tool_name"
             description = "Tool description"
@@ -509,57 +563,67 @@ class LangChainPythonDetector(BaseDetector):
                 if isinstance(node, ast.ClassDef) and node.name == class_name:
                     # Check if inherits from BaseTool
                     is_tool = any(
-                        (isinstance(base, ast.Name) and 'Tool' in base.id) or
-                        (isinstance(base, ast.Attribute) and 'Tool' in base.attr)
+                        (isinstance(base, ast.Name) and "Tool" in base.id)
+                        or (isinstance(base, ast.Attribute) and "Tool" in base.attr)
                         for base in node.bases
                     )
-                    
+
                     if is_tool:
                         tool_info = ToolInfo(name="", file_path=str(file_path))
                         args_schema_name = None
-                        
+
                         # Extract class attributes
                         for item in node.body:
                             # Handle: name = "tool_name"
                             if isinstance(item, ast.Assign):
                                 for target in item.targets:
                                     if isinstance(target, ast.Name):
-                                        if target.id == 'name':
-                                            name_val = self.extract_string_value(item.value)
+                                        if target.id == "name":
+                                            name_val = self.extract_string_value(
+                                                item.value
+                                            )
                                             if name_val:
                                                 tool_info.name = name_val
-                                        elif target.id == 'description':
-                                            desc_val = self.extract_string_value(item.value)
+                                        elif target.id == "description":
+                                            desc_val = self.extract_string_value(
+                                                item.value
+                                            )
                                             if desc_val:
                                                 tool_info.description = desc_val
-                            
+
                             # Handle: args_schema: Type[BaseModel] = SchemaClass
-                            elif isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
-                                if item.target.id == 'args_schema' and item.value:
+                            elif isinstance(item, ast.AnnAssign) and isinstance(
+                                item.target, ast.Name
+                            ):
+                                if item.target.id == "args_schema" and item.value:
                                     if isinstance(item.value, ast.Name):
                                         args_schema_name = item.value.id
-                        
+
                         # Extract parameters from args_schema if found
                         if args_schema_name:
-                            tool_info.parameters = self._extract_pydantic_model_fields(args_schema_name, content, file_path)
-                        
+                            tool_info.parameters = self._extract_pydantic_model_fields(
+                                args_schema_name, content, file_path
+                            )
+
                         if tool_info.name:
                             return tool_info
         except:
             pass
-        
+
         return None
-    
-    def _find_tool_class_from_import(self, class_name: str, content: str, file_path: Path) -> Optional[ToolInfo]:
+
+    def _find_tool_class_from_import(
+        self, class_name: str, content: str, file_path: Path
+    ) -> Optional[ToolInfo]:
         """Follow imports to find tool class definition in external files.
-        
+
         Handles patterns like:
             from orchestrator.api.tools import FetchLDFTool
             from .tools import FetchLDFTool
         """
         try:
             tree = ast.parse(content)
-            
+
             # Find import statement for the class
             for node in ast.walk(tree):
                 # Handle: from module import ClassName
@@ -569,80 +633,98 @@ class LangChainPythonDetector(BaseDetector):
                             if alias.name == class_name:
                                 # Found the import!
                                 module_path = node.module
-                                
+
                                 # Resolve the module path to a file path
-                                resolved_path = self._resolve_python_import(module_path, file_path)
+                                resolved_path = self._resolve_python_import(
+                                    module_path, file_path
+                                )
                                 if resolved_path and resolved_path.exists():
                                     try:
-                                        tool_file_content = resolved_path.read_text(encoding='utf-8')
+                                        tool_file_content = resolved_path.read_text(
+                                            encoding="utf-8"
+                                        )
                                         # Extract tool info from the external file
-                                        tool_info = self._extract_tool_from_class(class_name, tool_file_content, resolved_path)
+                                        tool_info = self._extract_tool_from_class(
+                                            class_name, tool_file_content, resolved_path
+                                        )
                                         if tool_info:
-                                            logger.debug(f"Found tool {class_name} in {resolved_path}")
+                                            logger.debug(
+                                                f"Found tool {class_name} in {resolved_path}"
+                                            )
                                             return tool_info
                                     except Exception as e:
-                                        logger.debug(f"Error reading tool file {resolved_path}: {e}")
+                                        logger.debug(
+                                            f"Error reading tool file {resolved_path}: {e}"
+                                        )
         except:
             pass
-        
+
         return None
-    
-    def _resolve_python_import(self, module_path: str, current_file: Path) -> Optional[Path]:
+
+    def _resolve_python_import(
+        self, module_path: str, current_file: Path
+    ) -> Optional[Path]:
         """Resolve a Python import path to an actual file path.
-        
+
         Handles:
         - Relative imports: .tools, ..api.tools
         - Absolute imports: orchestrator.api.tools
         """
         current_dir = current_file.parent
-        
+
         # Handle relative imports
-        if module_path.startswith('.'):
+        if module_path.startswith("."):
             # Count leading dots
             level = 0
             for char in module_path:
-                if char == '.':
+                if char == ".":
                     level += 1
                 else:
                     break
-            
+
             # Remove leading dots
             module_path = module_path[level:]
-            
+
             # Go up directories based on level
             target_dir = current_dir
             for _ in range(level - 1):
                 target_dir = target_dir.parent
-            
+
             # Convert module path to file path
             if module_path:
-                parts = module_path.split('.')
+                parts = module_path.split(".")
                 for part in parts:
                     target_dir = target_dir / part
-            
+
             # Try .py file or __init__.py
-            for candidate in [target_dir.with_suffix('.py'), target_dir / '__init__.py']:
+            for candidate in [
+                target_dir.with_suffix(".py"),
+                target_dir / "__init__.py",
+            ]:
                 if candidate.exists():
                     return candidate
-        
+
         # Handle absolute imports (try to find relative to current file's parent directories)
         else:
-            parts = module_path.split('.')
-            
+            parts = module_path.split(".")
+
             # Try to find the module starting from current directory and going up
             search_dir = current_dir
             for _ in range(5):  # Search up to 5 levels up
                 candidate_path = search_dir
                 for part in parts:
                     candidate_path = candidate_path / part
-                
+
                 # Try .py file or __init__.py
-                for candidate in [candidate_path.with_suffix('.py'), candidate_path / '__init__.py']:
+                for candidate in [
+                    candidate_path.with_suffix(".py"),
+                    candidate_path / "__init__.py",
+                ]:
                     if candidate.exists():
                         return candidate
-                
+
                 search_dir = search_dir.parent
                 if search_dir == search_dir.parent:  # Reached root
                     break
-        
+
         return None

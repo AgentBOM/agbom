@@ -11,8 +11,8 @@ Think `trivy` or `grype`, but for AI agents instead of packages.
 ## Quick Start
 
 ```bash
-# Install
-pip install agentbom
+# Install dependencies (from source)
+pip install -e .
 
 # Scan current directory
 agentbom scan --path .
@@ -38,7 +38,7 @@ agentbom rate-limit
 
 2. **Extracts metadata**:
    - Agent name, purpose, architecture
-   - Tools (with parameters, integrations, permissions)
+   - Tools (with parameters, descriptions, return types)
    - Owner (via CODEOWNERS or git history)
    - Created/updated timestamps
    - Files that define the agent
@@ -52,7 +52,7 @@ agentbom rate-limit
 - **Discovery Engine** (CLI, detectors): [PolyForm Internal Use 1.0.0](LICENSE_ENGINE)  
   Use internally; don't resell as a service.
 
-- **Agent BOM Schema** (/schema): [MIT](LICENSE_SCHEMA)  
+- **Agent BOM Schema**: [MIT](LICENSE_SCHEMA)  
   Fully open for maximum adoption and interoperability.
 
 See [NOTICE](NOTICE) for details.
@@ -65,74 +65,191 @@ When scanning organizations with many repositories, AgentBOM uses **smart search
 
 ```bash
 # Automatically searches for repos with agent/LLM code
-# Searches for: LangChain, AutoGen, CrewAI, LlamaIndex, OpenAI, Anthropic,
-#              HuggingFace, Ollama, and many more frameworks/providers
+# Smart mode (default) uses 4 combined queries covering:
+#   - LangChain, AutoGen, CrewAI, LlamaIndex frameworks
+#   - OpenAI, Anthropic, Cohere, HuggingFace providers
+#   - Generic agent patterns
 agentbom scan --org acme
 
-# Filter by language
+# Filter by language (reduces API calls)
 agentbom scan --org acme --search-languages Python,TypeScript
 
-# Use custom keywords
+# Use custom keywords for targeted search
 agentbom scan --org acme --search-keywords "langchain,openai,agent"
+
+# Disable search to scan all repos (not recommended for large orgs)
+agentbom scan --org acme --no-search
 ```
 
-**Benefits:**
+### Benefits
+
 - ⚡ **90-97% faster** for large orgs (4 hours → 8 minutes for 500 repos)
 - 🔒 **Privacy-focused** - only clones repos with relevant code
 - 💾 **Resource-efficient** - minimal disk/bandwidth usage
 - 🛡️ **Automatic rate limit handling** - waits and retries automatically
 
-**Note:** 
-- Requires GitHub authentication. Set `GITHUB_ACCESS_TOKEN` environment variable.
-- Search API limits vary (10-30 requests). Check with `agentbom rate-limit` before scanning.
-- Smart mode (default) reduces API calls by 90% - **essential for low rate limits**.
+### Rate Limits
 
-See **[GITHUB_ORG_SEARCH.md](GITHUB_ORG_SEARCH.md)** for complete documentation and **[RATE_LIMIT_GUIDE.md](RATE_LIMIT_GUIDE.md)** for rate limit handling.
+GitHub Search API limits vary by token type:
+- **Unauthenticated**: 10 requests/min
+- **Fine-grained PAT**: 10 requests/10min (common)
+- **Classic PAT**: 10-30 requests/min
+- **GitHub App**: 30 requests/min
+
+**Best Practices:**
+1. Set `GITHUB_ACCESS_TOKEN` environment variable
+2. Check limits first: `agentbom rate-limit`
+3. Use smart mode (default) - reduces 25+ queries to 4
+4. Filter by language to minimize API calls
+5. Wait 10+ minutes between scans if you have strict limits
+
+---
+
+## Supported Frameworks
+
+| Framework | Language | Status | Examples |
+|-----------|----------|--------|----------|
+| **LangChain** | Python | ✅ Fully supported | [examples/langchain_python/](examples/langchain_python/) |
+| **LangChain** | TypeScript | ✅ Fully supported | [examples/langchain_typescript/](examples/langchain_typescript/) |
+| **AutoGen** | Python | ✅ Fully supported | [examples/autogen/](examples/autogen/) |
+| **CrewAI** | Python | ✅ Fully supported | [examples/crewai/](examples/crewai/) |
 
 ---
 
 ## Documentation
 
-- **[REQUIREMENTS.md](REQUIREMENTS.md)** — Full engineering specs, detection rules, CLI reference
-- **[GITHUB_ORG_SEARCH.md](GITHUB_ORG_SEARCH.md)** — Organization scanning & smart search guide
-- **[SEARCH_KEYWORDS_UPDATE.md](SEARCH_KEYWORDS_UPDATE.md)** — Comprehensive search keywords for finding all AI/LLM repos
-- **[RATE_LIMIT_GUIDE.md](RATE_LIMIT_GUIDE.md)** — GitHub API rate limit handling & troubleshooting
-- **[RATE_LIMIT_10_REQUEST.md](RATE_LIMIT_10_REQUEST.md)** — Quick guide for 10-request limits (common with fine-grained PATs)
-- **[Schema](schema/)** — Agent BOM JSON Schema (coming soon)
-- **[Examples](examples/)** — Sample code and usage examples
+- **[examples/README.md](examples/README.md)** — Comprehensive examples for all supported frameworks
+- **[examples/USAGE.md](examples/USAGE.md)** — Usage patterns and scanning examples
 
 ---
 
-## Status
+## CLI Reference
 
-🚧 **v0.1 MVP** — In active development
+### Scan Command
 
-Currently supported:
-- ✅ LangChain Python
-- ✅ LangChain TypeScript
-- ⏳ AutoGen (planned)
-- ⏳ CrewAI (planned)
+```bash
+agentbom scan [OPTIONS]
+```
+
+**Source Options** (choose one):
+- `--path PATH` - Scan local directory (default: current directory)
+- `--repo ORG/REPO` - Scan GitHub repository
+- `--org ORG` - Scan GitHub organization
+
+**Output Options**:
+- `--out FILE` - Output file path (default: agent_bom.json)
+- `--stdout` - Output to stdout instead of file
+
+**Framework Options**:
+- `--frameworks LIST` - Frameworks to detect (default: langchain-py,langchain-ts)
+  - Options: `langchain-py`, `langchain-ts`, `autogen`, `crewai`
+
+**Search Options** (for `--org` only):
+- `--search/--no-search` - Use smart search to filter repos (default: on)
+- `--search-keywords KEYWORDS` - Custom search keywords (comma-separated)
+- `--search-languages LANGS` - Filter by languages (e.g., Python,TypeScript)
+
+**Advanced Options**:
+- `--max-file-mb SIZE` - Maximum file size in MB (default: 1.5)
+- `--parallel N` - Parallel workers (default: 8)
+- `--strict/--no-strict` - Strict detection mode (default: on)
+- `-v, --verbose` - Verbose output
+- `--quiet` - Quiet mode (errors only)
+
+### Rate Limit Command
+
+```bash
+agentbom rate-limit
+```
+
+Shows current GitHub API rate limit status for both Core API and Search API.
+
+### Version Command
+
+```bash
+agentbom --version
+```
+
+---
+
+## Examples
+
+See [examples/](examples/) directory for comprehensive examples including:
+
+- **LangChain Python**: Basic agents, SQL agents, retrieval agents, complex agents
+- **LangChain TypeScript**: TypeScript equivalents with Zod schemas
+- **AutoGen**: Multi-agent systems, research teams, coding teams
+- **CrewAI**: Crews with tasks, marketing teams, development workflows
+
+Run any example to see it in action, then scan it with AgentBOM:
+
+```bash
+# Run an example
+python examples/langchain_python/basic_agent.py
+
+# Scan it
+agentbom scan --path examples/langchain_python --out basic_agent_bom.json
+
+# View results
+cat basic_agent_bom.json | jq
+```
+
+---
+
+## Development
+
+```bash
+# Clone repository
+git clone https://github.com/AgentBOM/agbom.git
+cd agbom
+
+# Install in development mode
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run linting
+ruff check .
+
+# Format code
+black .
+```
 
 ---
 
 ## Contributing
 
-See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete spec.
+We welcome contributions! Areas of interest:
 
-We welcome contributions, especially:
-- Additional framework detectors (LlamaIndex, LangGraph, etc.)
+- Additional framework detectors (LlamaIndex, LangGraph, Semantic Kernel, etc.)
 - Improved tool parameter extraction
 - Schema enhancements
+- Documentation improvements
+
+Please ensure:
+1. Tests pass: `pytest`
+2. Code is formatted: `black .`
+3. Linting passes: `ruff check .`
+4. Examples are updated if adding new detectors
 
 ---
 
 ## License
 
 Dual-licensed — see [NOTICE](NOTICE):
-- Engine/CLI: PolyForm Internal Use 1.0.0
-- Schema: MIT
+- **Engine/CLI**: PolyForm Internal Use 1.0.0
+- **Schema**: MIT
 
 ---
 
-**Questions?** Open an issue or reach out to the maintainers.
+## Status
+
+🚧 **v0.1.0** — Active development
+
+This project is functional but still evolving. APIs and output formats may change.
+
+---
+
+**Questions?** Open an issue at [github.com/AgentBOM/agbom](https://github.com/AgentBOM/agbom)
 

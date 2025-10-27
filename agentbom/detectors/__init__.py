@@ -7,10 +7,10 @@ from .autogen import AutoGenDetector
 from .crewai import CrewAIDetector
 
 __all__ = [
-    'BaseDetector',
-    'DetectorResult',
-    'LangChainPythonDetector',
-    'LangChainTypeScriptDetector',
-    'AutoGenDetector',
-    'CrewAIDetector',
+    "BaseDetector",
+    "DetectorResult",
+    "LangChainPythonDetector",
+    "LangChainTypeScriptDetector",
+    "AutoGenDetector",
+    "CrewAIDetector",
 ]

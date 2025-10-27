@@ -5,7 +5,6 @@ import tempfile
 from pathlib import Path
 
 from agentbom.scanner import Scanner
-from agentbom.models import AgentBOM
 
 
 def test_langchain_python_agent():
@@ -43,7 +42,7 @@ agent = initialize_agent(
         test_file.write_text(code)
 
         # Scan
-        scanner = Scanner(frameworks=['langchain-py'])
+        scanner = Scanner(frameworks=["langchain-py"])
         bom = scanner.scan_path(Path(tmpdir))
 
         # Assertions
@@ -70,7 +69,7 @@ agent = initialize_agent(
 
 def test_langchain_typescript_agent():
     """Test LangChain TypeScript agent detection (Acceptance Test #2)."""
-    code = '''
+    code = """
 import { AgentExecutor } from "langchain/agents";
 import { tool } from "@langchain/core/tools";
 import { ChatOpenAI } from "@langchain/openai";
@@ -88,7 +87,7 @@ const exec = new AgentExecutor({
   llm: llm,
   tools: [searchTool]
 });
-'''
+"""
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Write test file
@@ -96,7 +95,7 @@ const exec = new AgentExecutor({
         test_file.write_text(code)
 
         # Scan
-        scanner = Scanner(frameworks=['langchain-ts'])
+        scanner = Scanner(frameworks=["langchain-ts"])
         bom = scanner.scan_path(Path(tmpdir))
 
         # Assertions
@@ -116,7 +115,7 @@ const exec = new AgentExecutor({
 
 def test_autogen_agent():
     """Test AutoGen agent detection (Acceptance Test #3)."""
-    code = '''
+    code = """
 from autogen import AssistantAgent, UserProxyAgent, GroupChat, GroupChatManager
 
 assistant = AssistantAgent(
@@ -138,7 +137,7 @@ group = GroupChat(
 )
 
 manager = GroupChatManager(groupchat=group, llm_config={"model": "gpt-4"})
-'''
+"""
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Write test file
@@ -146,7 +145,7 @@ manager = GroupChatManager(groupchat=group, llm_config={"model": "gpt-4"})
         test_file.write_text(code)
 
         # Scan
-        scanner = Scanner(frameworks=['autogen'])
+        scanner = Scanner(frameworks=["autogen"])
         bom = scanner.scan_path(Path(tmpdir))
 
         # Assertions
@@ -165,7 +164,7 @@ manager = GroupChatManager(groupchat=group, llm_config={"model": "gpt-4"})
 
 def test_crewai_agent():
     """Test CrewAI agent detection (Acceptance Test #4)."""
-    code = '''
+    code = """
 from crewai import Agent, Task, Crew
 
 analyst = Agent(
@@ -186,7 +185,7 @@ crew = Crew(
     tasks=[analysis_task],
     verbose=2
 )
-'''
+"""
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Write test file
@@ -194,7 +193,7 @@ crew = Crew(
         test_file.write_text(code)
 
         # Scan
-        scanner = Scanner(frameworks=['crewai'])
+        scanner = Scanner(frameworks=["crewai"])
         bom = scanner.scan_path(Path(tmpdir))
 
         # Assertions
@@ -213,14 +212,14 @@ crew = Crew(
 
 def test_zero_agents():
     """Test handling of zero agents (Acceptance Test #5)."""
-    code = '''
+    code = """
 # Regular Python code without any AI agents
 def hello_world():
     print("Hello, world!")
 
 if __name__ == "__main__":
     hello_world()
-'''
+"""
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Write test file
@@ -243,7 +242,7 @@ if __name__ == "__main__":
 
 def test_multiple_agents_in_project():
     """Test detecting multiple agents in a project."""
-    langchain_code = '''
+    langchain_code = """
 from langchain.agents import initialize_agent
 from langchain.tools import Tool
 
@@ -253,15 +252,15 @@ def search(query: str) -> str:
 tools = [Tool(name="search", func=search, description="Search")]
 
 agent1 = initialize_agent(tools=tools, llm=None, agent="zero-shot-react-description")
-'''
+"""
 
-    crewai_code = '''
+    crewai_code = """
 from crewai import Agent, Task, Crew
 
 researcher = Agent(role="Researcher", goal="Research topics", backstory="Expert researcher")
 task = Task(description="Research AI", agent=researcher)
 crew = Crew(agents=[researcher], tasks=[task])
-'''
+"""
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Write test files
@@ -269,7 +268,7 @@ crew = Crew(agents=[researcher], tasks=[task])
         (Path(tmpdir) / "agent2.py").write_text(crewai_code)
 
         # Scan with both frameworks
-        scanner = Scanner(frameworks=['langchain-py', 'crewai'])
+        scanner = Scanner(frameworks=["langchain-py", "crewai"])
         bom = scanner.scan_path(Path(tmpdir))
 
         # Assertions
@@ -283,11 +282,11 @@ crew = Crew(agents=[researcher], tasks=[task])
 
 def test_file_filtering():
     """Test that file filtering works correctly."""
-    agent_code = '''
+    agent_code = """
 from langchain.agents import initialize_agent
 tools = []
 agent = initialize_agent(tools=tools, llm=None, agent="zero-shot-react-description")
-'''
+"""
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create directory structure
@@ -301,10 +300,7 @@ agent = initialize_agent(tools=tools, llm=None, agent="zero-shot-react-descripti
         (test_dir / "test_agent.py").write_text(agent_code)
 
         # Scan with exclusion
-        scanner = Scanner(
-            frameworks=['langchain-py'],
-            exclude_patterns=['tests/**']
-        )
+        scanner = Scanner(frameworks=["langchain-py"], exclude_patterns=["tests/**"])
         bom = scanner.scan_path(Path(tmpdir))
 
         # Should only find agent in src, not in tests

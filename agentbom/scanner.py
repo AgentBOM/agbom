@@ -4,11 +4,10 @@ import logging
 import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Set
+from typing import List, Optional
 
 from .models import AgentBOM, Agent, Tools, ToolDetail, ToolParameter, ToolReturns
 from .detectors import (
-    BaseDetector,
     DetectorResult,
     LangChainPythonDetector,
     LangChainTypeScriptDetector,
@@ -25,10 +24,10 @@ class Scanner:
     """Main scanner for detecting AI agents."""
 
     FRAMEWORK_DETECTORS = {
-        'langchain-py': LangChainPythonDetector,
-        'langchain-ts': LangChainTypeScriptDetector,
-        'autogen': AutoGenDetector,
-        'crewai': CrewAIDetector,
+        "langchain-py": LangChainPythonDetector,
+        "langchain-ts": LangChainTypeScriptDetector,
+        "autogen": AutoGenDetector,
+        "crewai": CrewAIDetector,
     }
 
     def __init__(
@@ -39,7 +38,7 @@ class Scanner:
         include_patterns: List[str] = None,
         exclude_patterns: List[str] = None,
         parallel: int = 8,
-        llm_mode: str = 'auto',
+        llm_mode: str = "auto",
     ):
         """Initialize scanner.
 
@@ -52,7 +51,7 @@ class Scanner:
             parallel: Number of parallel workers
             llm_mode: LLM enrichment mode ('auto', 'on', 'off')
         """
-        self.frameworks = frameworks or ['langchain-py', 'langchain-ts']
+        self.frameworks = frameworks or ["langchain-py", "langchain-ts"]
         self.strict_mode = strict_mode
         self.max_file_mb = max_file_mb
         self.include_patterns = include_patterns or []
@@ -74,7 +73,7 @@ class Scanner:
             max_file_mb=max_file_mb,
             include_patterns=include_patterns,
             exclude_patterns=exclude_patterns,
-            strict=strict_mode
+            strict=strict_mode,
         )
 
         # GitHub client
@@ -98,7 +97,7 @@ class Scanner:
 
         # Initialize git extractor if it's a git repo
         git_extractor = None
-        if (path / '.git').exists():
+        if (path / ".git").exists():
             git_extractor = GitExtractor(path)
 
         # Scan files
@@ -122,7 +121,7 @@ class Scanner:
             AgentBOM with detected agents
         """
         # Clone repository
-        with tempfile.TemporaryDirectory(prefix='agentbom_') as tmp_dir:
+        with tempfile.TemporaryDirectory(prefix="agentbom_") as tmp_dir:
             tmp_path = Path(tmp_dir)
 
             logger.info(f"Cloning repository {repo}...")
@@ -171,11 +170,9 @@ class Scanner:
         if use_search:
             logger.info(f"Using smart search to find agent/LLM repositories in '{org}'")
             repos = self.github_client.search_code_in_org(
-                org,
-                keywords=search_keywords,
-                languages=search_languages
+                org, keywords=search_keywords, languages=search_languages
             )
-            
+
             if not repos:
                 logger.warning(
                     f"No repositories found with agent/LLM code in '{org}'. "
@@ -189,7 +186,7 @@ class Scanner:
                 "Consider using search mode (default) instead."
             )
             repos = self.github_client.list_org_repos(org)
-        
+
         logger.info(f"Will scan {len(repos)} repository(ies)")
 
         # Scan each repo
@@ -206,7 +203,9 @@ class Scanner:
                 logger.error(f"  ✗ Error scanning {repo}: {e}")
                 continue
 
-        logger.info(f"\nTotal: Found {len(all_agents)} agent(s) across {len(repos)} repository(ies)")
+        logger.info(
+            f"\nTotal: Found {len(all_agents)} agent(s) across {len(repos)} repository(ies)"
+        )
         return AgentBOM(agents=all_agents)
 
     def _scan_files(self, path: Path) -> List[DetectorResult]:
@@ -250,7 +249,9 @@ class Scanner:
 
         return results
 
-    def _process_file(self, file_path: Path, root_path: Path) -> Optional[DetectorResult]:
+    def _process_file(
+        self, file_path: Path, root_path: Path
+    ) -> Optional[DetectorResult]:
         """Process a single file for agent detection.
 
         Args:
@@ -279,7 +280,9 @@ class Scanner:
 
         return None
 
-    def _resolve_tool_files(self, result: DetectorResult, file_path: Path, root_path: Path):
+    def _resolve_tool_files(
+        self, result: DetectorResult, file_path: Path, root_path: Path
+    ):
         """Resolve tool file paths.
 
         Args:
@@ -303,7 +306,7 @@ class Scanner:
         self,
         result: DetectorResult,
         root_path: Path,
-        git_extractor: Optional[GitExtractor]
+        git_extractor: Optional[GitExtractor],
     ) -> Optional[Agent]:
         """Create Agent model from detection result.
 
@@ -332,8 +335,9 @@ class Scanner:
             else:
                 owner = "unknown"
                 from datetime import datetime
+
                 now = datetime.now()
-                timestamps = {'created_at': now, 'updated_at': now}
+                timestamps = {"created_at": now, "updated_at": now}
                 last_changed_by = None
                 default_branch = None
 
@@ -345,13 +349,13 @@ class Scanner:
                 if tool.parameters:
                     for param_name, param_info in tool.parameters.items():
                         # Skip special parameters like *args, **kwargs
-                        if param_name.startswith('*'):
+                        if param_name.startswith("*"):
                             continue
 
                         param = ToolParameter(
-                            type=param_info.get('type', 'Any'),
-                            required=param_info.get('required', False),
-                            description=param_info.get('description')
+                            type=param_info.get("type", "Any"),
+                            required=param_info.get("required", False),
+                            description=param_info.get("description"),
                         )
                         params[param_name] = param
 
@@ -359,22 +363,19 @@ class Scanner:
                 returns = None
                 if tool.returns:
                     returns = ToolReturns(
-                        type=tool.returns.get('type', 'Any'),
-                        description=tool.returns.get('description')
+                        type=tool.returns.get("type", "Any"),
+                        description=tool.returns.get("description"),
                     )
 
                 tool_detail = ToolDetail(
                     tool_name=tool.name,
                     description=tool.description or "unknown",
                     parameters=params,
-                    returns=returns
+                    returns=returns,
                 )
                 tool_details.append(tool_detail)
 
-            tools = Tools(
-                count=len(result.tools),
-                details=tool_details
-            )
+            tools = Tools(count=len(result.tools), details=tool_details)
 
             # Create agent
             agent = Agent(
@@ -384,18 +385,20 @@ class Scanner:
                 language=result.language,
                 frameworks=result.frameworks,
                 architecture=result.architecture,
-                description=result.metadata.get('description', ''),
+                description=result.metadata.get("description", ""),
                 files=agent_files,
                 owner=owner,
-                created_at=timestamps['created_at'],
-                updated_at=timestamps['updated_at'],
+                created_at=timestamps["created_at"],
+                updated_at=timestamps["updated_at"],
                 x_last_changed_by=last_changed_by,
                 x_repo_default_branch=default_branch,
                 tools=tools,
             )
 
             # LLM enrichment would go here if enabled
-            if self.llm_mode == 'on' or (self.llm_mode == 'auto' and self._has_llm_config()):
+            if self.llm_mode == "on" or (
+                self.llm_mode == "auto" and self._has_llm_config()
+            ):
                 # Would call LLM enrichment here
                 pass
 
@@ -408,4 +411,5 @@ class Scanner:
     def _has_llm_config(self) -> bool:
         """Check if LLM configuration is available."""
         import os
-        return bool(os.environ.get('OPENAI_API_KEY'))
+
+        return bool(os.environ.get("OPENAI_API_KEY"))

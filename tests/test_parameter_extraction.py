@@ -1,6 +1,5 @@
 """Test parameter and return type extraction functionality."""
 
-import json
 import tempfile
 from pathlib import Path
 
@@ -47,46 +46,53 @@ agent = initialize_agent(tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_D
         agent_file = Path(tmpdir) / "agent.py"
         agent_file.write_text(code)
 
-        scanner = Scanner(frameworks=['langchain-py'])
+        scanner = Scanner(frameworks=["langchain-py"])
         bom = scanner.scan_path(Path(tmpdir))
 
         assert len(bom.agents) == 1
         agent = bom.agents[0]
 
         # Check advanced_search tool
-        advanced_search_tool = next((t for t in agent.tools.details if t.tool_name == 'advanced_search'), None)
+        advanced_search_tool = next(
+            (t for t in agent.tools.details if t.tool_name == "advanced_search"), None
+        )
         assert advanced_search_tool is not None
 
         # Check parameters
         params = advanced_search_tool.parameters
-        assert 'query' in params
-        assert params['query'].type == 'str'
-        assert params['query'].required is True
-        assert params['query'].description == 'The search query string'
+        assert "query" in params
+        assert params["query"].type == "str"
+        assert params["query"].required is True
+        assert params["query"].description == "The search query string"
 
-        assert 'max_results' in params
-        assert params['max_results'].type == 'int'
-        assert params['max_results'].required is False
+        assert "max_results" in params
+        assert params["max_results"].type == "int"
+        assert params["max_results"].required is False
 
-        assert 'filters' in params
-        assert 'Optional' in params['filters'].type or 'Dict' in params['filters'].type
-        assert params['filters'].required is False
+        assert "filters" in params
+        assert "Optional" in params["filters"].type or "Dict" in params["filters"].type
+        assert params["filters"].required is False
 
-        assert 'include_metadata' in params
-        assert params['include_metadata'].type == 'bool'
-        assert params['include_metadata'].required is False
+        assert "include_metadata" in params
+        assert params["include_metadata"].type == "bool"
+        assert params["include_metadata"].required is False
 
         # Check return type
         assert advanced_search_tool.returns is not None
-        assert 'Dict' in advanced_search_tool.returns.type
-        assert 'List' in advanced_search_tool.returns.type or 'list' in advanced_search_tool.returns.type
+        assert "Dict" in advanced_search_tool.returns.type
+        assert (
+            "List" in advanced_search_tool.returns.type
+            or "list" in advanced_search_tool.returns.type
+        )
 
         # Check simple_tool
-        simple_tool = next((t for t in agent.tools.details if t.tool_name == 'simple_tool'), None)
+        simple_tool = next(
+            (t for t in agent.tools.details if t.tool_name == "simple_tool"), None
+        )
         assert simple_tool is not None
-        assert 'text' in simple_tool.parameters
-        assert simple_tool.parameters['text'].type == 'str'
-        assert simple_tool.returns.type == 'str'
+        assert "text" in simple_tool.parameters
+        assert simple_tool.parameters["text"].type == "str"
+        assert simple_tool.returns.type == "str"
 
 
 def test_parameter_extraction_from_docstrings():
@@ -116,34 +122,36 @@ agent = initialize_agent(tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_D
         agent_file = Path(tmpdir) / "agent.py"
         agent_file.write_text(code)
 
-        scanner = Scanner(frameworks=['langchain-py'])
+        scanner = Scanner(frameworks=["langchain-py"])
         bom = scanner.scan_path(Path(tmpdir))
 
         assert len(bom.agents) == 1
         agent = bom.agents[0]
 
         tool = agent.tools.details[0]
-        assert tool.tool_name == 'process_data'
+        assert tool.tool_name == "process_data"
 
         # Check parameters extracted from docstring
         params = tool.parameters
-        assert 'data' in params
+        assert "data" in params
         # Type should be extracted from docstring
-        assert params['data'].type == 'list' or params['data'].type == 'Any'
-        assert params['data'].required is True
+        assert params["data"].type == "list" or params["data"].type == "Any"
+        assert params["data"].required is True
 
-        assert 'format_type' in params
-        assert params['format_type'].type == 'str' or params['format_type'].type == 'Any'
-        assert params['format_type'].required is False
+        assert "format_type" in params
+        assert (
+            params["format_type"].type == "str" or params["format_type"].type == "Any"
+        )
+        assert params["format_type"].required is False
 
         # Check return type from docstring
         assert tool.returns is not None
-        assert 'dict' in tool.returns.type.lower() or tool.returns.type == 'Any'
+        assert "dict" in tool.returns.type.lower() or tool.returns.type == "Any"
 
 
 def test_structured_tool_with_pydantic():
     """Test parameter extraction from StructuredTool with Pydantic schema."""
-    code = '''
+    code = """
 from langchain.agents import initialize_agent, AgentType
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -166,38 +174,41 @@ search_tool = StructuredTool(
 
 tools = [search_tool]
 agent = initialize_agent(tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION)
-'''
+"""
 
     with tempfile.TemporaryDirectory() as tmpdir:
         agent_file = Path(tmpdir) / "agent.py"
         agent_file.write_text(code)
 
-        scanner = Scanner(frameworks=['langchain-py'])
+        scanner = Scanner(frameworks=["langchain-py"])
         bom = scanner.scan_path(Path(tmpdir))
 
         assert len(bom.agents) == 1
         agent = bom.agents[0]
 
         tool = agent.tools.details[0]
-        assert tool.tool_name == 'search'
+        assert tool.tool_name == "search"
 
         # Check parameters extracted from Pydantic model
         params = tool.parameters
-        assert 'query' in params
-        assert params['query'].type == 'str'
-        assert params['query'].required is True
+        assert "query" in params
+        assert params["query"].type == "str"
+        assert params["query"].required is True
 
-        assert 'limit' in params
-        assert params['limit'].type == 'int'
-        assert params['limit'].required is False
+        assert "limit" in params
+        assert params["limit"].type == "int"
+        assert params["limit"].required is False
 
-        assert 'category' in params
-        assert 'Optional' in params['category'].type or params['category'].required is False
+        assert "category" in params
+        assert (
+            "Optional" in params["category"].type
+            or params["category"].required is False
+        )
 
 
 def test_lambda_tool():
     """Test parameter extraction from lambda-based tools."""
-    code = '''
+    code = """
 from langchain.agents import initialize_agent, AgentType
 from langchain.tools import Tool
 
@@ -209,28 +220,28 @@ calculator = Tool(
 
 tools = [calculator]
 agent = initialize_agent(tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION)
-'''
+"""
 
     with tempfile.TemporaryDirectory() as tmpdir:
         agent_file = Path(tmpdir) / "agent.py"
         agent_file.write_text(code)
 
-        scanner = Scanner(frameworks=['langchain-py'])
+        scanner = Scanner(frameworks=["langchain-py"])
         bom = scanner.scan_path(Path(tmpdir))
 
         assert len(bom.agents) == 1
         agent = bom.agents[0]
 
         tool = agent.tools.details[0]
-        assert tool.tool_name == 'calculator'
+        assert tool.tool_name == "calculator"
 
         # Lambda parameters should be extracted
         params = tool.parameters
-        assert 'x' in params
-        assert 'y' in params
+        assert "x" in params
+        assert "y" in params
         # Lambda params don't have type hints, so should be 'Any'
-        assert params['x'].type == 'Any'
-        assert params['y'].type == 'Any'
+        assert params["x"].type == "Any"
+        assert params["y"].type == "Any"
 
 
 def test_numpy_style_docstring():
@@ -265,24 +276,24 @@ agent = initialize_agent(tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_D
         agent_file = Path(tmpdir) / "agent.py"
         agent_file.write_text(code)
 
-        scanner = Scanner(frameworks=['langchain-py'])
+        scanner = Scanner(frameworks=["langchain-py"])
         bom = scanner.scan_path(Path(tmpdir))
 
         assert len(bom.agents) == 1
         agent = bom.agents[0]
 
         tool = agent.tools.details[0]
-        assert tool.tool_name == 'analyze_data'
+        assert tool.tool_name == "analyze_data"
 
         # Check parameters from NumPy docstring
         params = tool.parameters
-        assert 'data' in params
-        assert 'method' in params
-        assert params['method'].required is False
+        assert "data" in params
+        assert "method" in params
+        assert params["method"].required is False
 
         # Check return type
         assert tool.returns is not None
-        assert tool.returns.type == 'float' or tool.returns.type == 'Any'
+        assert tool.returns.type == "float" or tool.returns.type == "Any"
 
 
 def test_sphinx_style_docstring():
@@ -312,27 +323,28 @@ agent = initialize_agent(tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_D
         agent_file = Path(tmpdir) / "agent.py"
         agent_file.write_text(code)
 
-        scanner = Scanner(frameworks=['langchain-py'])
+        scanner = Scanner(frameworks=["langchain-py"])
         bom = scanner.scan_path(Path(tmpdir))
 
         assert len(bom.agents) == 1
         agent = bom.agents[0]
 
         tool = agent.tools.details[0]
-        assert tool.tool_name == 'format_text'
+        assert tool.tool_name == "format_text"
 
         # Check parameters from Sphinx docstring
         params = tool.parameters
-        assert 'text' in params
-        assert params['text'].type == 'str' or params['text'].type == 'Any'
+        assert "text" in params
+        assert params["text"].type == "str" or params["text"].type == "Any"
 
-        assert 'style' in params
+        assert "style" in params
 
         # Check return type
         assert tool.returns is not None
-        assert tool.returns.type == 'str' or tool.returns.type == 'Any'
+        assert tool.returns.type == "str" or tool.returns.type == "Any"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import pytest
-    pytest.main([__file__, '-v'])
+
+    pytest.main([__file__, "-v"])

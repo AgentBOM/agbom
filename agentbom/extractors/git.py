@@ -4,7 +4,7 @@ import re
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict
 import subprocess
 import logging
 
@@ -68,8 +68,8 @@ class GitExtractor:
         # Fallback to current time if git info not available
         now = datetime.now()
         return {
-            'created_at': created_at or now,
-            'updated_at': updated_at or now,
+            "created_at": created_at or now,
+            "updated_at": updated_at or now,
         }
 
     def get_last_changed_by(self, files: List[str]) -> Optional[str]:
@@ -102,27 +102,27 @@ class GitExtractor:
         try:
             # Try to get the default branch
             result = subprocess.run(
-                ['git', 'symbolic-ref', 'refs/remotes/origin/HEAD'],
+                ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
 
             if result.returncode == 0:
                 # Extract branch name from refs/remotes/origin/main
                 branch = result.stdout.strip()
-                if '/' in branch:
-                    return branch.split('/')[-1]
+                if "/" in branch:
+                    return branch.split("/")[-1]
 
             # Fallback: try common default branch names
-            for branch in ['main', 'master']:
+            for branch in ["main", "master"]:
                 result = subprocess.run(
-                    ['git', 'show-ref', '--verify', f'refs/heads/{branch}'],
+                    ["git", "show-ref", "--verify", f"refs/heads/{branch}"],
                     cwd=self.repo_path,
                     capture_output=True,
                     text=True,
-                    timeout=5
+                    timeout=5,
                 )
                 if result.returncode == 0:
                     return branch
@@ -165,9 +165,9 @@ class GitExtractor:
         self._codeowners_cache = []
 
         possible_locations = [
-            self.repo_path / 'CODEOWNERS',
-            self.repo_path / '.github' / 'CODEOWNERS',
-            self.repo_path / 'docs' / 'CODEOWNERS',
+            self.repo_path / "CODEOWNERS",
+            self.repo_path / ".github" / "CODEOWNERS",
+            self.repo_path / "docs" / "CODEOWNERS",
         ]
 
         codeowners_path = None
@@ -185,14 +185,14 @@ class GitExtractor:
                 line = line.strip()
 
                 # Skip comments and empty lines
-                if not line or line.startswith('#'):
+                if not line or line.startswith("#"):
                     continue
 
                 # Parse pattern and owners
                 parts = line.split()
                 if len(parts) >= 2:
                     pattern = parts[0]
-                    owners = ' '.join(parts[1:])
+                    owners = " ".join(parts[1:])
                     self._codeowners_cache.append((pattern, owners))
 
         except Exception as e:
@@ -211,8 +211,8 @@ class GitExtractor:
             return None
 
         # Normalize path
-        if not file_path.startswith('/'):
-            file_path = '/' + file_path
+        if not file_path.startswith("/"):
+            file_path = "/" + file_path
 
         # Find longest matching pattern
         best_match = None
@@ -239,18 +239,18 @@ class GitExtractor:
         """
         # Convert CODEOWNERS pattern to regex
         # This is a simplified implementation
-        regex_pattern = pattern.replace('*', '[^/]*').replace('**', '.*')
+        regex_pattern = pattern.replace("*", "[^/]*").replace("**", ".*")
 
         # Add anchors
-        if not regex_pattern.startswith('/'):
-            regex_pattern = '.*' + regex_pattern
+        if not regex_pattern.startswith("/"):
+            regex_pattern = ".*" + regex_pattern
         else:
-            regex_pattern = '^' + regex_pattern
+            regex_pattern = "^" + regex_pattern
 
-        if regex_pattern.endswith('/'):
-            regex_pattern = regex_pattern + '.*'
+        if regex_pattern.endswith("/"):
+            regex_pattern = regex_pattern + ".*"
 
-        regex_pattern = regex_pattern + '$'
+        regex_pattern = regex_pattern + "$"
 
         try:
             return re.match(regex_pattern, path) is not None
@@ -280,7 +280,9 @@ class GitExtractor:
 
         return "unknown"
 
-    def _get_last_author(self, file_path: str) -> tuple[Optional[str], Optional[datetime]]:
+    def _get_last_author(
+        self, file_path: str
+    ) -> tuple[Optional[str], Optional[datetime]]:
         """Get last author and timestamp for a file.
 
         Args:
@@ -291,18 +293,18 @@ class GitExtractor:
         """
         try:
             result = subprocess.run(
-                ['git', 'log', '-1', '--pretty=%an <%ae>|%aI', '--', file_path],
+                ["git", "log", "-1", "--pretty=%an <%ae>|%aI", "--", file_path],
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
 
             if result.returncode == 0 and result.stdout.strip():
-                parts = result.stdout.strip().split('|')
+                parts = result.stdout.strip().split("|")
                 if len(parts) == 2:
                     author = parts[0]
-                    timestamp = datetime.fromisoformat(parts[1].replace('Z', '+00:00'))
+                    timestamp = datetime.fromisoformat(parts[1].replace("Z", "+00:00"))
                     return author, timestamp
 
         except (subprocess.TimeoutExpired, subprocess.SubprocessError, Exception) as e:
@@ -321,15 +323,17 @@ class GitExtractor:
         """
         try:
             result = subprocess.run(
-                ['git', 'log', '--reverse', '-1', '--pretty=%aI', '--', file_path],
+                ["git", "log", "--reverse", "-1", "--pretty=%aI", "--", file_path],
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
 
             if result.returncode == 0 and result.stdout.strip():
-                return datetime.fromisoformat(result.stdout.strip().replace('Z', '+00:00'))
+                return datetime.fromisoformat(
+                    result.stdout.strip().replace("Z", "+00:00")
+                )
 
         except (subprocess.TimeoutExpired, subprocess.SubprocessError, Exception) as e:
             logger.debug(f"Error getting creation time for {file_path}: {e}")
@@ -347,15 +351,17 @@ class GitExtractor:
         """
         try:
             result = subprocess.run(
-                ['git', 'log', '-1', '--pretty=%aI', '--', file_path],
+                ["git", "log", "-1", "--pretty=%aI", "--", file_path],
                 cwd=self.repo_path,
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
 
             if result.returncode == 0 and result.stdout.strip():
-                return datetime.fromisoformat(result.stdout.strip().replace('Z', '+00:00'))
+                return datetime.fromisoformat(
+                    result.stdout.strip().replace("Z", "+00:00")
+                )
 
         except (subprocess.TimeoutExpired, subprocess.SubprocessError, Exception) as e:
             logger.debug(f"Error getting update time for {file_path}: {e}")

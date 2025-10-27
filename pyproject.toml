@@ -13,6 +13,7 @@ dependencies = [
     "PyYAML>=6.0",
     "rich>=13.0", # For better CLI output
     "python-dotenv>=1.1.1",
+    "ruff>=0.14.1",
 ]
 
 [project.optional-dependencies]
