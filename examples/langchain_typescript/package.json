@@ -1,0 +1,25 @@
+{
+  "name": "agentbom-typescript-examples",
+  "version": "1.0.0",
+  "description": "LangChain TypeScript examples for AgentBOM testing",
+  "main": "basic_agent.ts",
+  "scripts": {
+    "basic": "ts-node basic_agent.ts",
+    "sql": "ts-node sql_agent.ts",
+    "retrieval": "ts-node retrieval_agent.ts",
+    "complex": "ts-node complex_agent.ts"
+  },
+  "dependencies": {
+    "langchain": "^0.1.0",
+    "@langchain/openai": "^0.0.14",
+    "@langchain/core": "^0.1.0",
+    "@langchain/community": "^0.0.20",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0"
+  }
+}
+

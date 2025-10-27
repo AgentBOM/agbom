@@ -1,0 +1,36 @@
+# Test results
+test_results.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# TypeScript
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Working directories
+coding/
+workspace/
+research/
+docker_workspace/
+local_work/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+

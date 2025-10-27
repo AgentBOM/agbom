@@ -1,0 +1,44 @@
+AgentBOM — Dual Licensing Notice
+
+This repository contains components under different licenses:
+
+┌──────────────────────────────────────────────────────────────────┐
+│ Component                  │ License                             │
+├──────────────────────────────────────────────────────────────────┤
+│ Discovery Engine           │ PolyForm Internal Use 1.0.0         │
+│ (CLI, scanners, detectors) │ See LICENSE_ENGINE                  │
+├──────────────────────────────────────────────────────────────────┤
+│ Agent BOM Schema           │ MIT License                         │
+│ (/schema directory)        │ See LICENSE_SCHEMA                  │
+└──────────────────────────────────────────────────────────────────┘
+
+Why This Split?
+
+1. Discovery Engine (PolyForm Internal Use):
+   - The CLI and detection logic are available for internal business use
+   - You may use, modify, and run it within your organization
+   - You may NOT provide it as a service to third parties or commercialize it
+   - Prevents vendors from repackaging and selling the scanner
+
+2. Schema (MIT):
+   - The Agent BOM JSON Schema is fully open and permissive
+   - Maximizes adoption and interoperability
+   - Anyone can implement, extend, or build tooling around it
+
+Quick Reference:
+
+- Using the CLI internally? ✓ Allowed (PolyForm Internal Use)
+- Modifying detectors for your org? ✓ Allowed (PolyForm Internal Use)
+- Adopting the schema in your own tools? ✓ Allowed (MIT)
+- Selling AgentBOM as a SaaS? ✗ Not allowed (PolyForm restriction)
+- Building commercial tooling that reads/writes Agent BOM files? ✓ Allowed (schema is MIT)
+
+For Questions:
+
+If you're unsure whether your use case is permitted, please open an issue
+or contact the maintainers.
+
+---
+
+Copyright (c) 2025 Agbom
+
