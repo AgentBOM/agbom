@@ -105,6 +105,71 @@ GitHub Search API limits vary by token type:
 
 ---
 
+## Policy Validation (Build Step)
+
+AgentBOM includes a static policy validation engine for CI/CD pipelines that checks code against organizational rulesets.
+
+### Quick Start
+
+```bash
+# Validate current directory against ruleset
+agentbom validate --path . --rules .github/agentbom/rules.yml
+
+# Check only changed files since origin/main
+agentbom validate --path . --rules .github/agentbom/rules.yml --changed-only
+
+# Strict mode (fail on Medium+ findings)
+agentbom validate --path . --rules .github/agentbom/rules.yml --strict
+
+# JSON output for CI/CD
+agentbom validate --path . --rules .github/agentbom/rules.yml --json
+```
+
+### Exit Codes
+
+- **0**: All checks passed
+- **1**: Policy violations found (High/Critical, or Medium+ with `--strict`)
+- **2**: Ruleset parse error
+- **4**: Internal error
+
+### Ruleset Format
+
+Rulesets are YAML or JSON files defining policy rules:
+
+```yaml
+version: "1"
+rules:
+  - id: LCP-001
+    title: Execution step cap present
+    category: reliability
+    severity: high
+    scope: build
+    detect:
+      python_regex_any: ["max_steps\\s*=\\s*\\d+"]
+      ts_regex_any: ["maxSteps\\s*:\\s*\\d+"]
+    autofix_hint: "Add max_steps=50 to your agent configuration"
+```
+
+### Built-in Rules
+
+The default ruleset (`.github/agentbom/rules.yml`) includes:
+
+- **LCP-001**: Execution step cap present (prevents infinite loops)
+- **LCP-002**: Model version pinned (bans `"latest"` model references)
+- **LCP-004**: Typed tool inputs (requires Pydantic/TypeScript interfaces)
+- **LCP-008**: Prompt templates (bans f-string concatenation with user input)
+
+### CI/CD Integration
+
+```yaml
+# GitHub Actions example
+- name: Validate Policy
+  run: |
+    agentbom validate --path . --rules .github/agentbom/rules.yml --strict --json
+```
+
+---
+
 ## Supported Frameworks
 
 | Framework | Language | Status | Examples |

@@ -204,7 +204,7 @@ def scan(
 
 @cli.command()
 @click.argument("file", type=click.Path(exists=True))
-def validate(file):
+def discover(file):
     """Validate an Agent BOM file against the schema."""
     try:
         # Read file
@@ -231,6 +231,10 @@ def validate(file):
     except Exception as e:
         console.print(f"[red]Schema validation failed: {e}[/red]")
         sys.exit(1)
+
+
+# Import validate command from cli_validate module
+from .cli_validate import validate
 
 
 @cli.command(name="rate-limit")

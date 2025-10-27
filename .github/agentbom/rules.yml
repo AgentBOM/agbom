@@ -1,0 +1,77 @@
+version: "1"
+rules:
+  - id: LCP-001
+    title: Execution step cap present
+    category: reliability
+    severity: high
+    scope: build
+    detect:
+      python_regex_any: 
+        - "max_steps\\s*=\\s*\\d+"
+        - "recursion_limit\\s*=\\s*\\d+"
+      ts_regex_any:
+        - "maxSteps\\s*:\\s*\\d+"
+        - "recursionLimit\\s*:\\s*\\d+"
+      manifest_keys_must_exist:
+        - "policy.default_steps"
+    autofix_hint: "Add max_steps=50 or set policy.default_steps in manifest."
+
+  - id: LCP-002
+    title: Model version pinned
+    category: security
+    severity: high
+    scope: build
+    detect:
+      fail_if_regex:
+        - "model\\s*[:=]\\s*['\"]latest['\"]"
+        - "model\\s*[:=]\\s*['\"]main['\"]"
+      python_regex_any:
+        - "model\\s*[:=]\\s*['\"][^'\"]*@\\d{4}-\\d{2}-\\d{2}['\"]"
+        - "model\\s*[:=]\\s*['\"][^'\"]*@\\d+\\.\\d+\\.\\d+['\"]"
+      ts_regex_any:
+        - "model\\s*[:=]\\s*['\"][^'\"]*@\\d{4}-\\d{2}-\\d{2}['\"]"
+        - "model\\s*[:=]\\s*['\"][^'\"]*@\\d+\\.\\d+\\.\\d+['\"]"
+    autofix_hint: "Pin model version to specific date or semantic version (e.g., @2024-01-01 or @1.2.3)."
+
+  - id: LCP-004
+    title: Typed tool inputs
+    category: reliability
+    severity: medium
+    scope: build
+    detect:
+      fail_if_regex:
+        - "\\*\\*kwargs"
+        - ":\\s*Any\\b"
+        - "any\\[\\]"
+        - "any\\s*\\["
+      python_regex_any:
+        - "from\\s+pydantic\\s+import"
+        - "from\\s+typing\\s+import.*TypedDict"
+        - "class\\s+\\w+.*BaseModel"
+      ts_regex_any:
+        - "interface\\s+\\w+"
+        - "type\\s+\\w+\\s*="
+        - "zod\\."
+    autofix_hint: "Use Pydantic models, TypedDict, or TypeScript interfaces instead of **kwargs or Any types."
+
+  - id: LCP-008
+    title: Prompt templates (no ad-hoc concat)
+    category: reliability
+    severity: medium
+    scope: build
+    detect:
+      fail_if_regex:
+        - "f['\"].*\\{.*user.*\\}.*['\"]"
+        - "f['\"].*\\{.*input.*\\}.*['\"]"
+        - "\\+\\s*['\"].*user.*['\"]"
+        - "\\+\\s*['\"].*input.*['\"]"
+      python_regex_any:
+        - "PromptTemplate"
+        - "from\\s+langchain.*prompt"
+        - "Jinja2"
+        - "jinja2"
+      ts_regex_any:
+        - "PromptTemplate"
+        - "from.*prompt"
+        - "template"
+    autofix_hint: "Use PromptTemplate, Jinja2, or other templating systems instead of f-strings or string concatenation with user input."
